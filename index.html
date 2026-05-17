@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="スタバ巡礼">
+<title>スタバ巡礼</title>
+<style>
+  :root {
+    --green:#006241; --green-l:#00754a; --gold:#d4af37; --gold-l:#f4d35e;
+    --bg:#f5f1ea; --bg2:#ede5d6; --card:#fff; --border:#e0d6c2; --border2:#d4c8b0;
+    --text:#2d2d2d; --text2:#665e4a; --text3:#999;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:"Hiragino Sans","Yu Gothic UI",system-ui,sans-serif; background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%); min-height:100dvh; color:var(--text); }
+
+  /* ヘッダー */
+  #header { position:sticky; top:0; z-index:50; background:linear-gradient(135deg,var(--green) 0%,var(--green-l) 100%); padding:10px 16px 0; box-shadow:0 2px 16px rgba(0,0,0,.25); }
+  .header-top { display:flex; align-items:center; gap:8px; color:#fff; margin-bottom:6px; }
+  .header-top h1 { font-size:15px; font-weight:700; letter-spacing:.03em; line-height:1.3; }
+  .header-count { margin-left:auto; text-align:right; flex-shrink:0; }
+  .header-count .num { font-size:20px; font-weight:800; line-height:1; }
+  .header-count .num span { font-size:12px; font-weight:400; opacity:.7; }
+  .header-count .pct { font-size:11px; opacity:.85; margin-top:1px; }
+  .progress-bar { height:5px; border-radius:99px; background:rgba(255,255,255,.2); overflow:hidden; margin-bottom:0; }
+  .progress-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gold) 0%,var(--gold-l) 50%,var(--gold) 100%); box-shadow:0 0 8px rgba(244,211,94,.5); transition:width .7s cubic-bezier(.34,1.56,.64,1); }
+
+  /* タブ */
+  .tab-bar { display:flex; background:rgba(0,0,0,.15); }
+  .tab-btn {
+    flex:1; padding:10px 4px 8px; font-size:12px; font-weight:700; color:rgba(255,255,255,.65);
+    background:none; border:none; cursor:pointer; border-bottom:3px solid transparent;
+    transition:all .2s; letter-spacing:.02em;
+  }
+  .tab-btn.active { color:#fff; border-bottom-color:var(--gold); }
+
+  /* メイン */
+  #main { max-width:640px; margin:0 auto; padding:12px 12px 100px; }
+
+  /* 検索 */
+  .search-wrap { position:relative; margin-bottom:8px; }
+  .search-wrap input {
+    width:100%; padding:10px 36px; border:2px solid var(--border2);
+    border-radius:12px; background:#fff; font-size:16px; outline:none;
+    transition:border-color .2s; -webkit-appearance:none;
+  }
+  .search-wrap input:focus { border-color:var(--green); }
+  .search-icon { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:#aaa; pointer-events:none; }
+  .search-clear { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; padding:4px; cursor:pointer; color:#aaa; display:none; }
+
+  /* フィルタ */
+  .filter-tabs { display:flex; gap:6px; margin-bottom:8px; }
+  .filter-tab { flex:1; padding:8px 4px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:2px solid var(--border2); background:#fff; color:var(--text); transition:all .15s; }
+  .filter-tab.active { background:var(--green); color:#fff; border-color:var(--green); }
+
+  /* 市町村セレクト */
+  .city-select {
+    width:100%; padding:9px 32px 9px 12px; border:2px solid var(--border2);
+    border-radius:10px; background:#fff; font-size:14px; color:var(--text);
+    margin-bottom:8px; outline:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center;
+  }
+
+  /* 操作ボタン */
+  .action-bar { display:flex; gap:6px; margin-bottom:12px; }
+  .btn-add { flex:1; padding:9px; border-radius:10px; background:var(--green); color:#fff; border:none; font-size:14px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; }
+  .btn-icon { padding:9px 14px; border-radius:10px; border:2px solid var(--border2); background:#fff; color:var(--text); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; }
+
+  /* 追加フォーム */
+  #add-form { display:none; background:#fff; border:2px dashed var(--green); border-radius:14px; padding:14px; margin-bottom:12px; }
+  #add-form h3 { font-size:14px; font-weight:700; color:var(--green); margin-bottom:10px; }
+  #add-form input { width:100%; padding:8px 10px; border:1.5px solid var(--border2); border-radius:8px; font-size:14px; margin-bottom:6px; outline:none; -webkit-appearance:none; }
+  #add-form input:focus { border-color:var(--green); }
+  .form-btns { display:flex; gap:6px; margin-top:4px; }
+  .btn-submit { flex:1; padding:9px; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-cancel-form { padding:9px 16px; background:#fff; color:var(--text); border:1.5px solid var(--border2); border-radius:8px; font-size:14px; cursor:pointer; }
+
+  /* 市町村セクション */
+  .city-section { margin-bottom:12px; }
+  .city-header {
+    display:flex; align-items:center; gap:6px; padding:8px 12px; border-radius:10px;
+    cursor:pointer; background:rgba(0,98,65,.07); border:1px solid rgba(0,98,65,.18);
+    margin-bottom:6px; position:sticky; top:108px; z-index:10;
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); user-select:none;
+  }
+  .city-header .chevron { font-size:12px; color:var(--green); transition:transform .2s; }
+  .city-header.collapsed .chevron { transform:rotate(-90deg); }
+  .city-header .city-name { font-size:14px; font-weight:700; color:var(--green); }
+  .city-header .city-cnt { margin-left:auto; font-size:13px; font-weight:600; color:var(--green); }
+  .city-stores { display:flex; flex-direction:column; gap:8px; }
+  .city-stores.hidden { display:none; }
+
+  /* 店舗カード */
+  .store-card { background:var(--card); border:1.5px solid var(--border); border-radius:14px; overflow:hidden; transition:border-color .2s,box-shadow .2s; }
+  .store-card.visited { border:2px solid var(--green); background:#f0faf5; box-shadow:0 2px 10px rgba(0,98,65,.1); }
+  .card-main { display:flex; align-items:flex-start; gap:10px; padding:12px; }
+  .check-btn { flex-shrink:0; width:40px; height:40px; border-radius:50%; border:2px solid var(--border2); background:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; transition:all .2s; }
+  .check-btn.checked { background:var(--green); border-color:var(--green); box-shadow:0 0 0 3px rgba(212,175,55,.35); }
+  .card-body { flex:1; min-width:0; }
+  .store-name { font-size:15px; font-weight:700; line-height:1.4; color:var(--text); }
+  .store-card.visited .store-name { color:var(--green); }
+  .custom-badge { display:inline-block; margin-left:6px; font-size:10px; font-weight:500; padding:1px 5px; border-radius:4px; background:#fef3c7; color:#92400e; vertical-align:middle; }
+  .store-addr { font-size:13px; color:var(--text3); margin-top:3px; line-height:1.4; }
+  /* RLS用コンセプト */
+  .store-concept { font-size:13px; color:var(--text2); line-height:1.5; margin-top:5px; padding-left:8px; border-left:3px solid var(--gold); display:none; }
+  .rls-mode .store-concept { display:block; }
+  .visit-date { font-size:13px; color:var(--green); font-weight:600; margin-top:5px; display:none; align-items:center; gap:3px; }
+  .visit-date.show { display:flex; }
+  .store-note { margin-top:6px; padding:6px 10px; background:#fdf6e3; border-left:3px solid var(--gold); border-radius:0 6px 6px 0; font-size:13px; color:var(--text2); display:none; line-height:1.5; }
+  .store-note.show { display:block; }
+
+  /* アクションバー */
+  .card-actions { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .act-btn { display:flex; align-items:center; gap:4px; padding:6px 10px; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; border:none; text-decoration:none; white-space:nowrap; }
+  .act-map { background:rgba(0,98,65,.09); color:var(--green); }
+  .act-official { background:#e8f4fd; color:#1a6fa0; }
+  .act-edit { background:#f5f1ea; color:var(--text); }
+  .act-del { background:#fee2e2; color:#b91c1c; margin-left:auto; }
+
+  /* 編集パネル */
+  .edit-panel { display:none; padding:10px 12px 12px; border-top:1px solid #f0e8d8; background:#faf6ed; }
+  .edit-panel.show { display:block; }
+  .edit-panel label { display:block; font-size:13px; font-weight:600; color:#666; margin-bottom:3px; margin-top:8px; }
+  .edit-panel label:first-child { margin-top:0; }
+  .edit-panel input[type="date"], .edit-panel textarea { width:100%; padding:7px 9px; border:1.5px solid var(--border2); border-radius:8px; font-size:14px; outline:none; font-family:inherit; background:#fff; -webkit-appearance:none; }
+  .edit-panel textarea { resize:none; height:60px; }
+  .edit-panel input:focus, .edit-panel textarea:focus { border-color:var(--green); }
+  .edit-btns { display:flex; gap:6px; margin-top:8px; }
+  .edit-save { flex:1; padding:8px; background:var(--green); color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer; }
+  .edit-cancel { padding:8px 14px; background:#fff; color:var(--text); border:1.5px solid var(--border2); border-radius:8px; font-size:14px; cursor:pointer; }
+
+  .empty { text-align:center; padding:48px 16px; color:var(--text3); font-size:15px; }
+  ::-webkit-scrollbar { display:none; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="header-top">
+    <span>☕</span>
+    <h1 id="h-title">兵庫スタバ巡礼</h1>
+    <div class="header-count">
+      <div class="num" id="h-visited">0<span> / <span id="h-total">76</span></span></div>
+      <div class="pct" id="h-pct">0% 達成</div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="hyogo">🏯 兵庫</button>
+    <button class="tab-btn" data-tab="ishikawa">🌊 石川</button>
+    <button class="tab-btn" data-tab="rls">🌟 RLS</button>
+  </div>
+</div>
+
+<div id="main">
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="search" id="search-input" placeholder="店舗名・地域・メモを検索" autocomplete="off">
+    <button class="search-clear" id="search-clear">✕</button>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab active" data-filter="all">すべて <span id="cnt-all"></span></button>
+    <button class="filter-tab" data-filter="unvisited">未訪問 <span id="cnt-unvisited"></span></button>
+    <button class="filter-tab" data-filter="visited">訪問済 <span id="cnt-visited"></span></button>
+  </div>
+
+  <select class="city-select" id="city-select"><option value="all">市町村: すべて</option></select>
+
+  <div class="action-bar">
+    <button class="btn-add" id="btn-add-open">＋ 店舗を追加</button>
+    <button class="btn-icon" id="btn-export" title="エクスポート">⬇</button>
+    <label class="btn-icon" title="インポート" style="cursor:pointer">⬆<input type="file" accept=".json" id="import-file" style="display:none"></label>
+  </div>
+
+  <div id="add-form">
+    <h3>新規店舗を追加</h3>
+    <input type="text" id="new-name" placeholder="店舗名（例：○○店）">
+    <input type="text" id="new-city" placeholder="市町村" list="city-list">
+    <datalist id="city-list"></datalist>
+    <input type="text" id="new-addr" placeholder="住所（任意）">
+    <div class="form-btns">
+      <button class="btn-submit" id="btn-add-submit">追加</button>
+      <button class="btn-cancel-form" id="btn-add-cancel">キャンセル</button>
+    </div>
+  </div>
+
+  <div id="store-list"></div>
+</div>
+
+<script>
+// ============================================================
+// データ定義
+// ============================================================
+
+const HYOGO_STORES = [
+  { name:"EKIZO 神戸三宮店", city:"神戸市中央区", address:"神戸市中央区 加納町4-2-1 神戸三宮阪急ビル" },
+  { name:"神戸北野異人館店", city:"神戸市中央区", address:"神戸市中央区 北野町3-1-31 北野物語館" },
+  { name:"三宮生田新道店", city:"神戸市中央区", address:"神戸市中央区 下山手通2-1-13 第１３シャルマンビル" },
+  { name:"神戸BAL店", city:"神戸市中央区", address:"神戸市中央区 三宮町3-6-1" },
+  { name:"クレフィ三宮店", city:"神戸市中央区", address:"神戸市中央区 三宮町1-4-3 クレフィ三宮2階" },
+  { name:"神戸旧居留地店", city:"神戸市中央区", address:"神戸市中央区 栄町通1-2-1 ＭＲＳＸビル" },
+  { name:"PLiCO神戸店", city:"神戸市中央区", address:"神戸市中央区 相生町3-1-1 PLiCO神戸1階" },
+  { name:"神戸メリケンパーク店", city:"神戸市中央区", address:"神戸市中央区 波止場町2-4" },
+  { name:"神戸ハーバーランドumie店", city:"神戸市中央区", address:"神戸市中央区 東川崎町1-7-2 A201" },
+  { name:"神戸ハーバーランドumie MOSAIC店", city:"神戸市中央区", address:"神戸市中央区 東川崎町1-6-1 神戸ハーバーランドumie MOSAIC 2F" },
+  { name:"三宮磯上通店", city:"神戸市中央区", address:"神戸市中央区 磯上通7-1-19 PROGRESS KOBE" },
+  { name:"神戸国際会館ＳＯＬ店", city:"神戸市中央区", address:"神戸市中央区 御幸通8-1-6 神戸国際会館 B1F" },
+  { name:"三宮ダイエー店", city:"神戸市中央区", address:"神戸市中央区 雲井通6-1-15 三宮ダイエー" },
+  { name:"ミント神戸店", city:"神戸市中央区", address:"神戸市中央区 雲井通7-1-1 ミント神戸" },
+  { name:"神戸上津台店", city:"神戸市北区", address:"神戸市北区 上津台9-2-13" },
+  { name:"神戸三田プレミアム・アウトレット店", city:"神戸市北区", address:"神戸市北区 上津台7-3 神戸三田プレミアム・アウトレット(120区)" },
+  { name:"イオンモール神戸北店", city:"神戸市北区", address:"神戸市北区 上津台8-1-1 イオンモール神戸北" },
+  { name:"学園都市キャンパススクェア店", city:"神戸市西区", address:"神戸市西区 学園西町1-4 キャンパススクェア" },
+  { name:"プレンティ西神中央店", city:"神戸市西区", address:"神戸市西区 糀台5-6-1 プレンティ 二番館2階" },
+  { name:"須磨海浜公園店", city:"神戸市須磨区", address:"神戸市須磨区 須磨浦通1-1-3 須磨海浜公園 松の社ヴィレッジA棟1階" },
+  { name:"須磨大丸店", city:"神戸市須磨区", address:"神戸市須磨区 中落合2-2-4 大丸 須磨店" },
+  { name:"PLiCO垂水店", city:"神戸市垂水区", address:"神戸市垂水区 神田町1-17 プリコ垂水南館2階" },
+  { name:"三井アウトレットパーク マリンピア神戸店", city:"神戸市垂水区", address:"神戸市垂水区 海岸通12-2 三井アウトレットパーク マリンピア神戸" },
+  { name:"神戸西舞子店", city:"神戸市垂水区", address:"神戸市垂水区 西舞子1-10-4" },
+  { name:"神戸垂水桃山台店", city:"神戸市垂水区", address:"神戸市垂水区 下畑町小川1400-12" },
+  { name:"淡路サービスエリア(下り線)店", city:"淡路市", address:"淡路市 岩屋2568 淡路サービスエリア(下り線)" },
+  { name:"神戸大学店", city:"神戸市灘区", address:"神戸市灘区 六甲台町1-1" },
+  { name:"住吉リブ店", city:"神戸市東灘区", address:"神戸市東灘区 住吉本町1-2-1" },
+  { name:"阪神御影クラッセ店", city:"神戸市東灘区", address:"神戸市東灘区 御影中町3-2-1 御影クラッセ" },
+  { name:"摂津本山岡本ビル店", city:"神戸市東灘区", address:"神戸市東灘区 岡本1-2-17 摂津本山二楽園ビル" },
+  { name:"芦屋モンテメール店", city:"芦屋市", address:"芦屋市 船戸町1-31 モンテメール" },
+  { name:"尼崎つかしん店", city:"尼崎市", address:"尼崎市 塚口本町4-8-1 グンゼタウンセンターつかしん" },
+  { name:"Olive LOUNGE 塚口店", city:"尼崎市", address:"尼崎市 塚口町1-12-21 Olive LOUNGE 1階" },
+  { name:"尼崎立花店", city:"尼崎市", address:"尼崎市 立花町3-12-6" },
+  { name:"あまがさきキューズモール店", city:"尼崎市", address:"尼崎市 潮江1-3-1 あまがさきキューズモール" },
+  { name:"ビエラ塚口店", city:"尼崎市", address:"尼崎市 上坂部1-1-1 ビエラ塚口" },
+  { name:"そよら西宮今津店", city:"西宮市", address:"西宮市 浜松原町21-1 そよら西宮今津1階" },
+  { name:"西宮鞍掛店", city:"西宮市", address:"西宮市 鞍掛町6-7" },
+  { name:"西宮建石店", city:"西宮市", address:"西宮市 建石町2-33" },
+  { name:"エビスタ西宮店", city:"西宮市", address:"西宮市 田中町1-6 エビスタ西宮" },
+  { name:"関西学院大学店", city:"西宮市", address:"西宮市 上ヶ原一番町1-155" },
+  { name:"西宮大島店", city:"西宮市", address:"西宮市 大島町6-16" },
+  { name:"アクタ西宮店", city:"西宮市", address:"西宮市 北口町1-2 ACTA西宮 東館" },
+  { name:"ビエラ甲子園口店", city:"西宮市", address:"西宮市 甲子園口2-1-37" },
+  { name:"阪神甲子園駅前店", city:"西宮市", address:"西宮市 甲子園高潮町4-3" },
+  { name:"ららぽーと甲子園2階店", city:"西宮市", address:"西宮市 甲子園八番町1-100 ららぽーと甲子園2階" },
+  { name:"ららぽーと甲子園1階店", city:"西宮市", address:"西宮市 甲子園八番町1-100 ららぽーと甲子園1階" },
+  { name:"阪急西宮ガーデンズ3階店", city:"西宮市", address:"西宮市 高松町14-2 阪急西宮ガーデンズ3階" },
+  { name:"スターバックス ティー&カフェ 阪急西宮ガーデンズ4階店", city:"西宮市", address:"西宮市 高松町14-2 阪急西宮ガーデンズ4階" },
+  { name:"イオンモール伊丹昆陽店", city:"伊丹市", address:"伊丹市 池尻4-1-1 イオンモール伊丹昆陽" },
+  { name:"イオンモール伊丹店", city:"伊丹市", address:"伊丹市 藤ノ木1-1-1" },
+  { name:"宝塚安倉店", city:"宝塚市", address:"宝塚市 安倉西4-610" },
+  { name:"中山寺店", city:"宝塚市", address:"宝塚市 中筋8-11-58" },
+  { name:"川西加茂店", city:"川西市", address:"川西市 加茂6-2-22" },
+  { name:"川西阪急スクエア店", city:"川西市", address:"川西市 栄町26-1 川西阪急スクエア2階" },
+  { name:"TSUTAYA BOOKSTORE AVIX豊岡店", city:"豊岡市", address:"豊岡市 大手町7-30" },
+  { name:"新三田桜のこみち公園店", city:"三田市", address:"三田市 福島1-1" },
+  { name:"三田キッピーモール店", city:"三田市", address:"三田市 駅前町2-1 キッピーモール 2階" },
+  { name:"姫路市川橋通店", city:"姫路市", address:"姫路市 市川橋通1-20" },
+  { name:"ピオレ姫路ピオレ2(1階)店", city:"姫路市", address:"姫路市 豆腐町222 ピオレ姫路 ピオレ2 1階" },
+  { name:"ピオレ姫路ピオレ1(4階)店", city:"姫路市", address:"姫路市 駅前町188-1 ピオレ姫路 ピオレ1 4階" },
+  { name:"スターバックス ティー&カフェ ピオレ姫路(地下1階)店", city:"姫路市", address:"姫路市 駅前町188-1 ピオレ姫路 ピオレ1 地下1階" },
+  { name:"イオンモール姫路大津店", city:"姫路市", address:"姫路市 大津区大津町2-5 イオンモール姫路大津" },
+  { name:"姫路南店", city:"姫路市", address:"姫路市 飾磨区三宅3-3" },
+  { name:"姫路飾磨店", city:"姫路市", address:"姫路市 飾磨区恵美酒236" },
+  { name:"イオンモール姫路リバーシティー店", city:"姫路市", address:"姫路市 飾磨区細江2560" },
+  { name:"三木サービスエリア(下り線)店", city:"三木市", address:"三木市 加佐湯谷1142 三木サービスエリア(下り線)" },
+  { name:"三木サービスエリア(上り線)店", city:"三木市", address:"三木市 大村大門1067-110 三木サービスエリア(上り線)" },
+  { name:"ピオレ明石店", city:"明石市", address:"明石市 大明石町1-1-23 ピオレ明石" },
+  { name:"明石ビブレ店", city:"明石市", address:"明石市 大久保町ゆりのき通り 1-3-2 明石ビブレ" },
+  { name:"明石魚住店", city:"明石市", address:"明石市 魚住町清水463-3" },
+  { name:"TSUTAYA パークタウン加古川店", city:"加古川市", address:"加古川市 加古川町寺家町269-1 ミーツテラス" },
+  { name:"加古川別府店", city:"加古川市", address:"加古川市 別府町朝日町11-1" },
+  { name:"兵庫播磨店", city:"加古郡播磨町", address:"加古郡 播磨町南大中3-3-30" },
+  { name:"イオンモール加西北条店", city:"加西市", address:"加西市 北条町北条308-1" },
+  { name:"高砂小松原店", city:"高砂市", address:"高砂市 荒井町小松原4-1005" },
+];
+
+const HYOGO_CITY_ORDER = [
+  "神戸市中央区","神戸市東灘区","神戸市灘区","神戸市北区","神戸市西区",
+  "神戸市須磨区","神戸市垂水区","芦屋市","西宮市","尼崎市","伊丹市",
+  "宝塚市","川西市","三田市","明石市","加古川市","高砂市","加古郡播磨町",
+  "加西市","姫路市","三木市","豊岡市","淡路市",
+];
+
+const ISHIKAWA_STORES = [
+  { name:"クロスゲート金沢店", city:"金沢市", address:"金沢市 広岡1-5-3 クロスゲート金沢 1階" },
+  { name:"金沢藤江店", city:"金沢市", address:"金沢市 藤江北4-475" },
+  { name:"金沢フォーラス6階クーゴ店", city:"金沢市", address:"金沢市 堀川新町3-1 金沢フォーラス 6F" },
+  { name:"金沢フォーラス1階店", city:"金沢市", address:"金沢市 堀川新町3-1 金沢フォーラス 1F" },
+  { name:"金沢Rinto西口店", city:"金沢市", address:"金沢市 木ノ新保町1-1 金沢百番街Rinto 1階" },
+  { name:"金沢Rinto東口店", city:"金沢市", address:"金沢市 木ノ新保町1-1 金沢百番街Rinto 1階" },
+  { name:"香林坊店", city:"金沢市", address:"金沢市 香林坊2-1-1 クラソ・プレイス香林坊" },
+  { name:"金沢鞍月店", city:"金沢市", address:"金沢市 戸水1-429" },
+  { name:"金沢エムザ店", city:"金沢市", address:"金沢市 武蔵町15-1 金沢エムザ" },
+  { name:"金沢大桑店", city:"金沢市", address:"金沢市 大桑2-394" },
+  { name:"金沢有松店", city:"金沢市", address:"金沢市 有松3-3-36" },
+  { name:"野々市市役所前店", city:"野々市市", address:"野々市市 三納1-46" },
+  { name:"野々市堀内店", city:"野々市市", address:"野々市市 堀内5-241" },
+  { name:"小松打越店", city:"小松市", address:"小松市 打越町い201" },
+  { name:"イオンモール新小松店", city:"小松市", address:"小松市 清六町315" },
+  { name:"イオンモール白山店", city:"白山市", address:"白山市 横江町5001" },
+  { name:"TSUTAYA BOOKSTORE イオンモール白山店", city:"白山市", address:"白山市 横江町5001" },
+  { name:"フェアモール松任店", city:"白山市", address:"白山市 幸明町232-1 フェアモール松任" },
+  { name:"イオンモールかほく店", city:"かほく市", address:"かほく市 内日角タ25 イオンモールかほく" },
+];
+
+const ISHIKAWA_CITY_ORDER = ["金沢市","野々市市","白山市","小松市","かほく市"];
+
+const RLS_STORES = [
+  {id:"kushiro", name:"釧路鶴見橋店", city:"北海道", address:"北海道釧路市北大通14丁目2-1", concept:"釧路川と幣舞橋を望む煉瓦造りの歴史的建築を活かした店舗。大正時代の建物の意匠を随所に残しながら、地域の文化を発信。", official:"https://store.starbucks.co.jp/detail-1549/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+釧路鶴見橋店"},
+  {id:"hirosaki", name:"弘前公園前店", city:"青森", address:"青森県弘前市上白銀町1-1", concept:"国の登録有形文化財「旧第八師団長官舎」を活用。弘前城公園の目の前に位置し、大正ロマンの面影を残す建築。", official:"https://store.starbucks.co.jp/detail-1549/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+弘前公園前店"},
+  {id:"kawagoe", name:"川越鐘つき通り店", city:"埼玉", address:"埼玉県川越市幸町15-18", concept:"蔵造りの街並みが続く川越・一番街に位置。外観は伝統的な蔵造り、内装は地域の歴史を尊重したデザイン。", official:"https://store.starbucks.co.jp/detail-1554/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+川越鐘つき通り店"},
+  {id:"futakotamagawa", name:"二子玉川公園店", city:"東京", address:"東京都世田谷区玉川1-16-1 二子玉川公園内", concept:"多摩川沿いの二子玉川公園内に建つサステイナブル建築。緑と水辺の景観に溶け込む開放的な空間。", official:"https://store.starbucks.co.jp/detail-1138/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+二子玉川公園店"},
+  {id:"shinjukugyoen", name:"新宿御苑店", city:"東京", address:"東京都新宿区新宿1-1 新宿御苑内", concept:"国民公園・新宿御苑内の特別な一店。都心のオアシスとして四季の自然と調和した落ち着きある空間。", official:"https://store.starbucks.co.jp/detail-1838/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+新宿御苑店"},
+  {id:"shibuyatsutaya", name:"SHIBUYA TSUTAYA 2F店", city:"東京", address:"東京都渋谷区宇田川町21-6 SHIBUYA TSUTAYA 2F", concept:"渋谷スクランブル交差点を見下ろす都市型ランドマーク。「STARBUCKS Green Ribbon」が空間全体を包み込む唯一無二のデザイン。", official:"https://store.starbucks.co.jp/detail-2003/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+SHIBUYA+TSUTAYA+2F店"},
+  {id:"kamakura", name:"鎌倉御成町店", city:"神奈川", address:"神奈川県鎌倉市御成町11-4", concept:"歴史ある古都・鎌倉で地元の方々に愛される店舗。縁側や日本庭園で鎌倉の風情を感じながら一息つける。", official:"https://store.starbucks.co.jp/detail-624/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+鎌倉御成町店"},
+  {id:"toyama", name:"富山環水公園店", city:"富山", address:"富山県富山市湊入船町2-4 富岩運河環水公園内", concept:"「世界一美しいスタバ」と称されることも。富岩運河環水公園内に建つガラス張りの建築。天門橋を望む絶景席が人気。", official:"https://store.starbucks.co.jp/detail-897/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+富山環水公園店"},
+  {id:"zenkoji", name:"信州善光寺仲見世通り店", city:"長野", address:"長野県長野市元善町483", concept:"善光寺の仁王門に近接する2階建て日本家屋。「賑わいと静寂、光と影」をコンセプトに5種類の長野県産木材を使用。長野市景観賞受賞。", official:"https://store.starbucks.co.jp/detail-1789/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+信州善光寺仲見世通り店"},
+  {id:"hamamatsu", name:"浜松城公園店", city:"静岡", address:"静岡県浜松市中央区元城町218-2 浜松城公園内", concept:"浜松城公園の森に包まれるような建築。既存の木を最大限活かし、やむなく伐採した木を取手やアートに再活用したサステイナブルな店舗。", official:"https://store.starbucks.co.jp/detail-1565/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+浜松城公園店"},
+  {id:"takefu", name:"武生中央公園店", city:"福井", address:"福井県越前市府中1丁目1-1 武生中央公園内", concept:"絵本作家かこさとし氏監修の武生中央公園内。ガラス面を多用し公園との一体感を演出、木材を多く取り入れた温もりある空間。", official:"https://store.starbucks.co.jp/detail-1569/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+武生中央公園店"},
+  {id:"ninenzaka", name:"京都二寧坂ヤサカ茶屋店", city:"京都", address:"京都府京都市東山区桝屋町349", concept:"世界初・畳の間でコーヒー体験ができる店舗。築100年超の伝統的な日本家屋。清水寺へ続く二年坂に溶け込む唯一無二の空間。", official:"https://store.starbucks.co.jp/detail-1476/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都二寧坂ヤサカ茶屋店"},
+  {id:"uji", name:"京都宇治平等院表参道店", city:"京都", address:"京都府宇治市宇治蓮華5-1", concept:"世界遺産・平等院の表参道に位置。抹茶の産地・宇治ならではのメニューも。京都・宇治の伝統と歴史に敬意を払った建築。", official:"https://store.starbucks.co.jp/detail-1443/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都宇治平等院表参道店"},
+  {id:"kyotomaruyama", name:"京都円山公園 菊の渓店", city:"京都", address:"京都府京都市東山区円山町620-1", concept:"2026年3月開業。日本初・国の名勝に指定された公園内のスタバ。八坂神社隣接の円山公園の自然と歴史に溶け込む最新ランドマーク店舗。", official:"https://store.starbucks.co.jp/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都円山公園+菊の渓店"},
+  {id:"ise", name:"伊勢 内宮前店", city:"三重", address:"三重県伊勢市宇治中之切町12", concept:"伊勢神宮・内宮のおはらい町に位置。神宮の建築様式にならった切妻屋根と木の格子が特徴的な和の空間。", official:"https://store.starbucks.co.jp/detail-1889/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+伊勢+内宮前店"},
+  {id:"osaka", name:"大阪城公園森ノ宮店", city:"大阪", address:"大阪府大阪市中央区大阪城3-1 大阪城公園内", concept:"大阪城公園の豊かな自然の中に建つ。大阪の歴史とコーヒーの世界観が交差する、緑に囲まれたサードプレイス。", official:"https://store.starbucks.co.jp/detail-1592/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+大阪城公園森ノ宮店"},
+  {id:"nara", name:"奈良鴻ノ池運動公園店", city:"奈良", address:"奈良県奈良市鴻ノ池町1-1", concept:"奈良の伝統工芸・赤膚焼や奈良墨のエッセンスを随所に取り入れた、緑豊かな鴻ノ池運動公園内の店舗。", official:"https://store.starbucks.co.jp/detail-1514/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+奈良鴻ノ池運動公園店"},
+  {id:"awaji", name:"淡路サービスエリア(下り線)店", city:"兵庫", address:"兵庫県淡路市岩屋2568 淡路サービスエリア（下り線）", concept:"高速道路のSAにある唯一のリージョナルランドマークストア。明石海峡大橋と瀬戸内海を一望できる絶景ロケーション。", official:"https://store.starbucks.co.jp/detail-949/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+淡路サービスエリア下り線店"},
+  {id:"kitanoijinkan", name:"神戸北野異人館店", city:"兵庫", address:"兵庫県神戸市中央区北野町3-1-31 北野物語館", concept:"1907年建造のアメリカ人邸宅を改修した2階建て洋館。阪神・淡路大震災で被災後、神戸市が復元・移築。異国情緒あふれる建築。", official:"https://store.starbucks.co.jp/detail-940/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+神戸北野異人館店"},
+  {id:"merikenpark", name:"神戸メリケンパーク店", city:"兵庫", address:"兵庫県神戸市中央区波止場町2-4", concept:"神戸港のパノラマを楽しめるサステイナブル建築。地元産木材やコーヒー豆かすを再利用した環境配慮型店舗。", official:"https://store.starbucks.co.jp/detail-1432/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+神戸メリケンパーク店"},
+  {id:"tottori", name:"シャミネ鳥取店", city:"鳥取", address:"鳥取県鳥取市東品治町101 シャミネ鳥取", concept:"47都道府県最後のスタバとして2015年に開業した鳥取県1号店。建材の一部に鳥取県産木材を使用。", official:"https://store.starbucks.co.jp/detail-1287/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+シャミネ鳥取店"},
+  {id:"izumo", name:"出雲大社店", city:"島根", address:"島根県出雲市大社町杵築南1346-9", concept:"縁結びの神様・出雲大社の参道入口「勢溜の大鳥居」の目の前。1階に縁側風ベンチ、2階から出雲大社の眺望を楽しめる。", official:"https://store.starbucks.co.jp/detail-1208/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+出雲大社店"},
+  {id:"itsukushima", name:"厳島表参道店", city:"広島", address:"広島県廿日市市宮島町507-2", concept:"世界遺産・宮島の表参道商店街に建つ。フェリーで渡る島にある日本唯一の海島スタバ。浮島鳥居と瀬戸内海の絶景を楽しめる。", official:"https://store.starbucks.co.jp/detail-1354/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+厳島表参道店"},
+  {id:"yamaguchi", name:"山口市中央公園店", city:"山口", address:"山口県山口市中央公園内", concept:"山口の豊かな自然に囲まれた公園内の店舗。周防国の歴史と山口の伝統工芸が随所に表現されたデザイン。", official:"https://store.starbucks.co.jp/detail-1477/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+山口市中央公園店"},
+  {id:"dogo", name:"道後温泉駅舎店", city:"愛媛", address:"愛媛県松山市道後町1-14 道後温泉駅舎内", concept:"明治時代から続く路面電車の終着駅・道後温泉駅の駅舎内。旧レールや枕木を再利用した内装など、明治へのオマージュが随所に。", official:"https://store.starbucks.co.jp/detail-1577/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+道後温泉駅舎店"},
+  {id:"dazaifu", name:"太宰府天満宮表参道店", city:"福岡", address:"福岡県太宰府市宰府3-2-43", concept:"建築家・隈研吾氏設計。釘を1本も使わず約2000本の杉材を木組みで構成。全長4kmにおよぶ木組みが壮観な伝統と現代の融合。", official:"https://store.starbucks.co.jp/detail-1058/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+太宰府天満宮表参道店"},
+  {id:"ohori", name:"福岡大濠公園店", city:"福岡", address:"福岡県福岡市中央区大濠公園1-9", concept:"大濠公園の水辺に隣接するガラス張りの開放的な建築。公園と水景を一望し、福岡市民の憩いの場に溶け込む。", official:"https://store.starbucks.co.jp/detail-962/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+福岡大濠公園店"},
+  {id:"mojiko", name:"門司港駅店", city:"福岡", address:"福岡県北九州市門司区西海岸1-5-31 門司港駅内", concept:"国の重要文化財・門司港駅舎内に位置する全国唯一の重要文化財内スタバ。大正時代のネオ・ルネサンス様式の歴史的駅舎でコーヒーを楽しめる。", official:"https://store.starbucks.co.jp/detail-2137/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+門司港駅店"},
+  {id:"sengan", name:"鹿児島仙巌園店", city:"鹿児島", address:"鹿児島県鹿児島市吉野町9700-1 仙巌園隣接", concept:"世界文化遺産・仙巌園に隣接する登録有形文化財をリノベーション。薩摩切子をモチーフにした照明や鹿児島県産杉のテーブルが美しい。", official:"https://store.starbucks.co.jp/detail-1441/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+鹿児島仙巌園店"},
+  {id:"okinawa", name:"沖縄本部町店", city:"沖縄", address:"沖縄県国頭郡本部町字伊豆味2220", concept:"やんばるの豊かな海と山に囲まれたロケーション。沖縄の砂浜に流れついたプラスチックで制作したアートや琉球松のテーブルを設置。", official:"https://store.starbucks.co.jp/detail-1543/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+沖縄本部町店"},
+];
+
+// ============================================================
+// タブ設定
+// ============================================================
+const TAB_CONFIG = {
+  hyogo:    { label:"🏯 兵庫スタバ巡礼",    icon:"☕", key:"hyogo-records",    stores:HYOGO_STORES,    cityOrder:HYOGO_CITY_ORDER,    isRls:false },
+  ishikawa: { label:"🌊 石川スタバ巡礼",    icon:"☕", key:"ishikawa-records", stores:ISHIKAWA_STORES, cityOrder:ISHIKAWA_CITY_ORDER, isRls:false },
+  rls:      { label:"🌟 RLS巡礼",           icon:"🌟", key:"rls-records",      stores:RLS_STORES,      cityOrder:[],                  isRls:true  },
+};
+
+// ============================================================
+// 状態
+// ============================================================
+let currentTab = 'hyogo';
+let currentFilter = 'all';
+let currentCity = 'all';
+let currentSearch = '';
+let collapsedCities = {};
+
+function cfg() { return TAB_CONFIG[currentTab]; }
+
+// ストレージ
+function makeId(store) { return `${store.city}|${store.name}`; }
+function loadRecords(key) { try { return JSON.parse(localStorage.getItem(key) || '{}'); } catch { return {}; } }
+function saveRecords(key, r) { localStorage.setItem(key, JSON.stringify(r)); }
+
+// 全タブのrecordsをメモリにキャッシュ
+const allRecords = {
+  hyogo:    loadRecords('hyogo-records'),
+  ishikawa: loadRecords('ishikawa-records'),
+  rls:      loadRecords('rls-records'),
+};
+
+function getRecords() { return allRecords[currentTab]; }
+function persistRecords() { saveRecords(cfg().key, allRecords[currentTab]); }
+
+function getV(id) { return getRecords()[id]?.visited || false; }
+function getD(id) { return getRecords()[id]?.visitDate || ''; }
+function getN(id) { return getRecords()[id]?.note || ''; }
+
+function toggleVisited(id) {
+  const r = getRecords();
+  if (!r[id]) r[id] = {};
+  r[id].visited = !r[id].visited;
+  if (r[id].visited && !r[id].visitDate) r[id].visitDate = new Date().toISOString().slice(0,10);
+  persistRecords(); render();
+}
+
+function saveEdit(id, date, note) {
+  const r = getRecords();
+  if (!r[id]) r[id] = {};
+  r[id].visitDate = date; r[id].note = note;
+  persistRecords(); render();
+}
+
+// カスタム店舗追加（hyogo/ishikawa用）
+function addCustomStore(name, city, addr) {
+  const id = `custom|${Date.now()}|${name}`;
+  const r = getRecords();
+  r[id] = { visited:false, visitDate:'', note:'', isCustom:true, customStore:{name, city, address:addr||city} };
+  persistRecords(); render();
+}
+
+function deleteCustom(id) {
+  if (!confirm('この店舗を削除しますか？')) return;
+  delete allRecords[currentTab][id];
+  persistRecords(); render();
+}
+
+// ============================================================
+// ストアリスト生成（カスタム店舗含む）
+// ============================================================
+function buildStoreList() {
+  const conf = cfg();
+  const r = getRecords();
+
+  if (conf.isRls) {
+    return conf.stores.map(s => ({ ...s, id: s.id }));
+  }
+
+  // マスタ店舗
+  const list = conf.stores.map(s => ({
+    id: makeId(s), name: s.name, city: s.city, address: s.address, isCustom: false
+  }));
+  // カスタム店舗
+  Object.entries(r).forEach(([id, rec]) => {
+    if (rec.isCustom && rec.customStore) {
+      list.push({ id, name: rec.customStore.name, city: rec.customStore.city, address: rec.customStore.address||'', isCustom: true });
+    }
+  });
+  return list;
+}
+
+// ============================================================
+// フィルタ
+// ============================================================
+function getFiltered() {
+  return buildStoreList().filter(s => {
+    if (currentCity !== 'all' && s.city !== currentCity) return false;
+    if (currentFilter === 'visited' && !getV(s.id)) return false;
+    if (currentFilter === 'unvisited' && getV(s.id)) return false;
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      return s.name.toLowerCase().includes(q) ||
+             s.city.toLowerCase().includes(q) ||
+             (s.address||'').toLowerCase().includes(q) ||
+             (s.concept||'').toLowerCase().includes(q) ||
+             (getN(s.id)||'').toLowerCase().includes(q);
+    }
+    return true;
+  });
+}
+
+function groupByCity(list) {
+  const m = new Map();
+  list.forEach(s => { if (!m.has(s.city)) m.set(s.city, []); m.get(s.city).push(s); });
+  const order = cfg().cityOrder;
+  return Array.from(m.entries()).sort((a, b) => {
+    const ai = order.indexOf(a[0]), bi = order.indexOf(b[0]);
+    if (ai===-1 && bi===-1) return a[0].localeCompare(b[0], 'ja');
+    if (ai===-1) return 1; if (bi===-1) return -1;
+    return ai - bi;
+  });
+}
+
+// ============================================================
+// ヘッダー更新
+// ============================================================
+function updateHeader() {
+  const all = buildStoreList();
+  const total = all.length;
+  const visited = all.filter(s => getV(s.id)).length;
+  const pct = total ? Math.round(visited/total*100) : 0;
+  document.getElementById('h-title').textContent = cfg().label;
+  document.getElementById('h-visited').innerHTML = `${visited}<span> / <span id="h-total">${total}</span></span>`;
+  document.getElementById('h-pct').textContent = `${pct}% 達成`;
+  document.getElementById('progress-fill').style.width = pct + '%';
+
+  const f = getFiltered();
+  document.getElementById('cnt-all').textContent = `(${f.length})`;
+  document.getElementById('cnt-visited').textContent = `(${f.filter(s=>getV(s.id)).length})`;
+  document.getElementById('cnt-unvisited').textContent = `(${f.filter(s=>!getV(s.id)).length})`;
+}
+
+// ============================================================
+// 市町村セレクト更新
+// ============================================================
+function updateCitySelect() {
+  const sel = document.getElementById('city-select');
+  const dl = document.getElementById('city-list');
+  const all = buildStoreList();
+  const cities = [...new Set(all.map(s=>s.city))].sort((a,b)=>{
+    const order = cfg().cityOrder;
+    const ai=order.indexOf(a), bi=order.indexOf(b);
+    if(ai===-1&&bi===-1) return a.localeCompare(b,'ja');
+    if(ai===-1) return 1; if(bi===-1) return -1; return ai-bi;
+  });
+  const prev = sel.value;
+  sel.innerHTML = '<option value="all">市町村: すべて</option>';
+  dl.innerHTML = '';
+  cities.forEach(c => {
+    const t = all.filter(s=>s.city===c);
+    const v = t.filter(s=>getV(s.id)).length;
+    const opt = document.createElement('option');
+    opt.value=c; opt.textContent=`${c} (${v}/${t.length})`; sel.appendChild(opt);
+    const dopt = document.createElement('option'); dopt.value=c; dl.appendChild(dopt);
+  });
+  sel.value = cities.includes(prev) ? prev : 'all';
+
+  // RLSではラベルを「都道府県」に
+  sel.options[0].textContent = cfg().isRls ? '都道府県: すべて' : '市町村: すべて';
+}
+
+// ============================================================
+// カード作成
+// ============================================================
+function createCard(store) {
+  const isRls = cfg().isRls;
+  const visited = getV(store.id);
+  const vdate = getD(store.id);
+  const note = getN(store.id);
+  const mapsUrl = store.maps || `https://www.google.com/maps/search/?api=1&query=スターバックス+${encodeURIComponent(store.name)}+${encodeURIComponent(store.address||'')}`;
+
+  const card = document.createElement('div');
+  card.className = 'store-card' + (visited ? ' visited' : '') + (isRls ? ' rls-mode' : '');
+
+  card.innerHTML = `
+    <div class="card-main">
+      <button class="check-btn ${visited?'checked':''}" data-id="${store.id}">
+        ${visited ? '☕' : '○'}
+      </button>
+      <div class="card-body">
+        <div class="store-name">
+          ${store.name}
+          ${store.isCustom ? '<span class="custom-badge">追加</span>' : ''}
+        </div>
+        <div class="store-addr">${store.address||store.city}</div>
+        ${isRls && store.concept ? `<div class="store-concept">${store.concept}</div>` : ''}
+        <div class="visit-date ${visited&&vdate?'show':''}">📅 ${vdate}</div>
+        <div class="store-note ${note?'show':''}">${note}</div>
+        <div class="card-actions">
+          ${isRls ? `<a class="act-btn act-official" href="${store.official}" target="_blank" rel="noopener">🌐 公式ページ</a>` : ''}
+          <a class="act-btn act-map" href="${mapsUrl}" target="_blank" rel="noopener">📍 地図</a>
+          <button class="act-btn act-edit" data-edit="${store.id}">✏️ メモ・日付</button>
+          ${store.isCustom ? `<button class="act-btn act-del" data-del="${store.id}">🗑</button>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="edit-panel" id="edit-${store.id}">
+      <label>訪問日</label>
+      <input type="date" id="edate-${store.id}" value="${vdate}">
+      <label>メモ・感想</label>
+      <textarea id="enote-${store.id}" placeholder="飲んだドリンク、印象など...">${note}</textarea>
+      <div class="edit-btns">
+        <button class="edit-save" data-save="${store.id}">保存</button>
+        <button class="edit-cancel" data-cancel="${store.id}">キャンセル</button>
+      </div>
+    </div>`;
+
+  card.querySelector('.check-btn').addEventListener('click', () => toggleVisited(store.id));
+  card.querySelector('[data-edit]').addEventListener('click', () => {
+    document.getElementById('edit-'+store.id).classList.toggle('show');
+  });
+  card.querySelector('[data-save]').addEventListener('click', () => {
+    saveEdit(store.id, document.getElementById('edate-'+store.id).value, document.getElementById('enote-'+store.id).value);
+  });
+  card.querySelector('[data-cancel]').addEventListener('click', () => {
+    document.getElementById('edit-'+store.id).classList.remove('show');
+  });
+  card.querySelector('[data-del]')?.addEventListener('click', () => deleteCustom(store.id));
+
+  return card;
+}
+
+// ============================================================
+// メインレンダリング
+// ============================================================
+function render() {
+  updateHeader();
+  updateCitySelect();
+
+  // 追加ボタン：RLSでは非表示
+  document.getElementById('btn-add-open').style.display = cfg().isRls ? 'none' : '';
+  document.getElementById('add-form').style.display = 'none';
+
+  const list = document.getElementById('store-list');
+  const filtered = getFiltered();
+  const grouped = groupByCity(filtered);
+
+  if (!grouped.length) {
+    list.innerHTML = '<div class="empty">該当する店舗がありません</div>';
+    return;
+  }
+
+  list.innerHTML = '';
+
+  grouped.forEach(([city, stores]) => {
+    const allCity = buildStoreList().filter(s=>s.city===city);
+    const vCity = allCity.filter(s=>getV(s.id)).length;
+    const collapsed = collapsedCities[`${currentTab}|${city}`];
+
+    const sec = document.createElement('div');
+    sec.className = 'city-section';
+
+    const hdr = document.createElement('div');
+    hdr.className = 'city-header' + (collapsed ? ' collapsed' : '');
+    hdr.innerHTML = `<span class="chevron">▼</span><span class="city-name">${city}</span><span class="city-cnt">${vCity}/${allCity.length}</span>`;
+    hdr.addEventListener('click', () => {
+      collapsedCities[`${currentTab}|${city}`] = !collapsedCities[`${currentTab}|${city}`];
+      render();
+    });
+
+    const ul = document.createElement('div');
+    ul.className = 'city-stores' + (collapsed ? ' hidden' : '');
+    stores.forEach(s => ul.appendChild(createCard(s)));
+
+    sec.appendChild(hdr); sec.appendChild(ul);
+    list.appendChild(sec);
+  });
+}
+
+// ============================================================
+// タブ切り替え
+// ============================================================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentTab = this.dataset.tab;
+    currentFilter = 'all';
+    currentCity = 'all';
+    currentSearch = '';
+    document.getElementById('search-input').value = '';
+    document.getElementById('search-clear').style.display = 'none';
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-filter="all"]').classList.add('active');
+    document.getElementById('city-select').value = 'all';
+    render();
+  });
+});
+
+// 検索
+document.getElementById('search-input').addEventListener('input', function() {
+  currentSearch = this.value;
+  document.getElementById('search-clear').style.display = currentSearch ? 'block' : 'none';
+  render();
+});
+document.getElementById('search-clear').addEventListener('click', () => {
+  document.getElementById('search-input').value = '';
+  currentSearch = '';
+  document.getElementById('search-clear').style.display = 'none';
+  render();
+});
+
+// フィルタ
+document.querySelectorAll('.filter-tab').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    currentFilter = this.dataset.filter;
+    render();
+  });
+});
+
+// 市町村
+document.getElementById('city-select').addEventListener('change', function() {
+  currentCity = this.value; render();
+});
+
+// 店舗追加
+document.getElementById('btn-add-open').addEventListener('click', () => {
+  document.getElementById('add-form').style.display = 'block';
+  document.getElementById('new-name').focus();
+});
+document.getElementById('btn-add-cancel').addEventListener('click', () => {
+  document.getElementById('add-form').style.display = 'none';
+});
+document.getElementById('btn-add-submit').addEventListener('click', () => {
+  const name = document.getElementById('new-name').value.trim();
+  const city = document.getElementById('new-city').value.trim();
+  const addr = document.getElementById('new-addr').value.trim();
+  if (!name || !city) { alert('店舗名と市町村は必須です'); return; }
+  addCustomStore(name, city, addr);
+  document.getElementById('add-form').style.display = 'none';
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-city').value = '';
+  document.getElementById('new-addr').value = '';
+});
+
+// エクスポート
+document.getElementById('btn-export').addEventListener('click', () => {
+  const data = { exportedAt: new Date().toISOString(), tab: currentTab, records: getRecords() };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `starbucks-${currentTab}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+});
+
+// インポート
+document.getElementById('import-file').addEventListener('change', function() {
+  const file = this.files?.[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      const records = data.records || data;
+      if (typeof records === 'object') {
+        if (confirm('現在のタブのデータを上書きします。続行しますか？')) {
+          allRecords[currentTab] = records;
+          persistRecords(); render();
+        }
+      }
+    } catch { alert('ファイルの読み込みに失敗しました'); }
+  };
+  reader.readAsText(file); this.value = '';
+});
+
+// ============================================================
+// 初期描画
+// ============================================================
+render();
+</script>
+</body>
+</html>
