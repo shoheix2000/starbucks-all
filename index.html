@@ -173,16 +173,17 @@
 
   <div class="action-bar">
     <button class="btn-add" id="btn-add-open">＋ 店舗を追加</button>
-    <button class="btn-icon" id="btn-export" title="エクスポート">⬇</button>
-    <label class="btn-icon" title="インポート" style="cursor:pointer">⬆<input type="file" accept=".json" id="import-file" style="display:none"></label>
+    <button class="btn-icon" id="btn-export" title="エクスポート">↓</button>
+    <label class="btn-icon" title="インポート" style="cursor:pointer">↑<input type="file" accept=".json" id="import-file" style="display:none"></label>
   </div>
 
   <div id="add-form">
     <h3>新規店舗を追加</h3>
     <input type="text" id="new-name" placeholder="店舗名（例：○○店）">
-    <input type="text" id="new-city" placeholder="市町村" list="city-list">
+    <input type="text" id="new-city" placeholder="市町村・都道府県" list="city-list">
     <datalist id="city-list"></datalist>
     <input type="text" id="new-addr" placeholder="住所（任意）">
+    <input type="text" id="new-official" placeholder="公式ページURL（任意・RLS用）">
     <div class="form-btns">
       <button class="btn-submit" id="btn-add-submit">追加</button>
       <button class="btn-cancel-form" id="btn-add-cancel">キャンセル</button>
@@ -321,7 +322,6 @@ const RLS_STORES = [
   {id:"takefu", name:"武生中央公園店", city:"福井", address:"福井県越前市府中1丁目1-1 武生中央公園内", concept:"絵本作家かこさとし氏監修の武生中央公園内。ガラス面を多用し公園との一体感を演出、木材を多く取り入れた温もりある空間。", official:"https://store.starbucks.co.jp/detail-1569/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+武生中央公園店"},
   {id:"ninenzaka", name:"京都二寧坂ヤサカ茶屋店", city:"京都", address:"京都府京都市東山区桝屋町349", concept:"世界初・畳の間でコーヒー体験ができる店舗。築100年超の伝統的な日本家屋。清水寺へ続く二年坂に溶け込む唯一無二の空間。", official:"https://store.starbucks.co.jp/detail-1476/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都二寧坂ヤサカ茶屋店"},
   {id:"uji", name:"京都宇治平等院表参道店", city:"京都", address:"京都府宇治市宇治蓮華5-1", concept:"世界遺産・平等院の表参道に位置。抹茶の産地・宇治ならではのメニューも。京都・宇治の伝統と歴史に敬意を払った建築。", official:"https://store.starbucks.co.jp/detail-1443/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都宇治平等院表参道店"},
-  {id:"kyotomaruyama", name:"京都円山公園 菊の渓店", city:"京都", address:"京都府京都市東山区円山町620-1", concept:"2026年3月開業。日本初・国の名勝に指定された公園内のスタバ。八坂神社隣接の円山公園の自然と歴史に溶け込む最新ランドマーク店舗。", official:"https://store.starbucks.co.jp/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+京都円山公園+菊の渓店"},
   {id:"ise", name:"伊勢 内宮前店", city:"三重", address:"三重県伊勢市宇治中之切町12", concept:"伊勢神宮・内宮のおはらい町に位置。神宮の建築様式にならった切妻屋根と木の格子が特徴的な和の空間。", official:"https://store.starbucks.co.jp/detail-1889/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+伊勢+内宮前店"},
   {id:"osaka", name:"大阪城公園森ノ宮店", city:"大阪", address:"大阪府大阪市中央区大阪城3-1 大阪城公園内", concept:"大阪城公園の豊かな自然の中に建つ。大阪の歴史とコーヒーの世界観が交差する、緑に囲まれたサードプレイス。", official:"https://store.starbucks.co.jp/detail-1592/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+大阪城公園森ノ宮店"},
   {id:"nara", name:"奈良鴻ノ池運動公園店", city:"奈良", address:"奈良県奈良市鴻ノ池町1-1", concept:"奈良の伝統工芸・赤膚焼や奈良墨のエッセンスを随所に取り入れた、緑豊かな鴻ノ池運動公園内の店舗。", official:"https://store.starbucks.co.jp/detail-1514/", maps:"https://www.google.com/maps/search/?api=1&query=スターバックス+奈良鴻ノ池運動公園店"},
@@ -395,10 +395,10 @@ function saveEdit(id, date, note) {
 }
 
 // カスタム店舗追加（hyogo/ishikawa用）
-function addCustomStore(name, city, addr) {
+function addCustomStore(name, city, addr, official) {
   const id = `custom|${Date.now()}|${name}`;
   const r = getRecords();
-  r[id] = { visited:false, visitDate:'', note:'', isCustom:true, customStore:{name, city, address:addr||city} };
+  r[id] = { visited:false, visitDate:'', note:'', isCustom:true, customStore:{name, city, address:addr||city, official:official||''} };
   persistRecords(); render();
 }
 
@@ -416,7 +416,14 @@ function buildStoreList() {
   const r = getRecords();
 
   if (conf.isRls) {
-    return conf.stores.map(s => ({ ...s, id: s.id }));
+    const base = conf.stores.map(s => ({ ...s, id: s.id }));
+    const r = getRecords();
+    Object.entries(r).forEach(([id, rec]) => {
+      if (rec.isCustom && rec.customStore) {
+        base.push({ id, name: rec.customStore.name, city: rec.customStore.city, address: rec.customStore.address||'', concept: rec.customStore.concept||'', official: rec.customStore.official||'', maps: rec.customStore.maps||`https://www.google.com/maps/search/?api=1&query=スターバックス+${encodeURIComponent(rec.customStore.name)}`, isCustom: true });
+      }
+    });
+    return base;
   }
 
   // マスタ店舗
@@ -597,7 +604,7 @@ function render() {
   updateCitySelect();
 
   // 追加ボタン：RLSでは非表示
-  document.getElementById('btn-add-open').style.display = cfg().isRls ? 'none' : '';
+  document.getElementById('btn-add-open').style.display = '';
   document.getElementById('add-form').style.display = 'none';
 
   const list = document.getElementById('store-list');
@@ -697,11 +704,13 @@ document.getElementById('btn-add-submit').addEventListener('click', () => {
   const city = document.getElementById('new-city').value.trim();
   const addr = document.getElementById('new-addr').value.trim();
   if (!name || !city) { alert('店舗名と市町村は必須です'); return; }
-  addCustomStore(name, city, addr);
+  const official = document.getElementById('new-official').value.trim();
+  addCustomStore(name, city, addr, official);
   document.getElementById('add-form').style.display = 'none';
   document.getElementById('new-name').value = '';
   document.getElementById('new-city').value = '';
   document.getElementById('new-addr').value = '';
+  document.getElementById('new-official').value = '';
 });
 
 // エクスポート
